@@ -46,7 +46,9 @@ export function MenuManager() {
 
   // Local, drag-reorderable copy of the items (kept in sync with the query).
   const [rows, setRows] = useState<MenuItemRow[]>([]);
-  const itemsSig = items.map((i) => `${i.id}:${i.sort_order}`).join("|");
+  // Include updated_at so availability toggles / edits re-sync too (every
+  // mutation bumps updated_at). Signature is a stable string, so it never loops.
+  const itemsSig = items.map((i) => `${i.id}:${i.sort_order}:${i.updated_at}`).join("|");
   useEffect(() => {
     setRows(items);
     // eslint-disable-next-line react-hooks/exhaustive-deps
