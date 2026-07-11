@@ -69,6 +69,7 @@ export function Footer({ restaurant }: { restaurant: Restaurant | null }) {
                 ["Gallery", "/gallery"],
                 ["Locations", "/locations"],
                 ["Contact", "/contact"],
+                ["Leave a Review", "/review"],
               ].map(([label, href]) => (
                 <li key={href}>
                   <Link href={href} className="transition-colors hover:text-brand">

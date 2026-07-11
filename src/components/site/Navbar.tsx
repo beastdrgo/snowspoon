@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/gallery", label: "Gallery" },
   { href: "/locations", label: "Locations" },
   { href: "/contact", label: "Contact" },
+  { href: "/review", label: "Review" },
 ];
 
 export function Navbar() {
