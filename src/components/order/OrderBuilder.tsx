@@ -101,7 +101,7 @@ export function OrderBuilder({
       </div>
 
       {/* items */}
-      <div className="mx-auto grid max-w-3xl gap-3">
+      <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3">
         {filtered.map((item) => {
           const count = qty[item.id] ?? 0;
           return (
