@@ -19,7 +19,7 @@ const BUCKET = "menu-images";
  * load fast (phone cameras produce 2–5 MB files; this trims them to ~100–300 KB).
  * Falls back to the original file if anything goes wrong or it's already small.
  */
-async function compressImage(file: File, maxDim = 1280, quality = 0.82): Promise<Blob> {
+export async function compressImage(file: File, maxDim = 1280, quality = 0.82): Promise<Blob> {
   if (typeof document === "undefined" || !file.type.startsWith("image/")) return file;
   try {
     const bitmap = await createImageBitmap(file);
@@ -60,6 +60,45 @@ export async function uploadImage(file: File, folder = "menu"): Promise<string> 
   if (error) throw error;
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
   return data.publicUrl;
+}
+
+/**
+ * Re-compress an image that already lives in our storage bucket: download it,
+ * shrink it, upload the smaller version and return its new public URL.
+ * Returns null if it couldn't be meaningfully shrunk (already small / error).
+ */
+export async function optimizeImageByUrl(
+  url: string,
+  folder = "menu"
+): Promise<{ url: string; oldKB: number; newKB: number } | null> {
+  const supabase = createClient();
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  const oldKB = Math.round(blob.size / 1024);
+  const file = new File([blob], "image.jpg", { type: blob.type || "image/jpeg" });
+  const optimized = await compressImage(file, 1100, 0.72);
+  // Only replace if we saved a meaningful amount (>15%).
+  if (optimized === file || optimized.size > blob.size * 0.85) return null;
+  const path = `${folder}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, optimized, {
+    cacheControl: "31536000",
+    upsert: false,
+    contentType: "image/jpeg",
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, oldKB, newKB: Math.round(optimized.size / 1024) };
+}
+
+/** Update only the image_url of a menu item. */
+export async function updateMenuItemImage(id: string, image_url: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("menu_items")
+    .update({ image_url, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 /* --------------------------- Menu items ---------------------------- */

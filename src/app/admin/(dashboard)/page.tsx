@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatPrice, timeAgo } from "@/lib/format";
+import { ImageOptimizer } from "@/components/admin/ImageOptimizer";
 
 export const dynamic = "force-dynamic";
 
@@ -141,6 +142,11 @@ export default async function AdminDashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Image optimization */}
+      <div className="mt-4">
+        <ImageOptimizer />
       </div>
     </div>
   );
