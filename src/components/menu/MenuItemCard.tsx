@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Star, Plus, Flame, Sparkles } from "lucide-react";
 import type { MenuItem } from "@/lib/types";
@@ -15,6 +16,7 @@ export function MenuItemCard({
   onSelect?: (item: MenuItem) => void;
   priority?: boolean;
 }) {
+  const [loaded, setLoaded] = useState(false);
   return (
     <motion.button
       type="button"
@@ -30,6 +32,10 @@ export function MenuItemCard({
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-cloud">
+        {/* shimmer placeholder until the photo loads */}
+        {item.image_url && !loaded && (
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-cloud to-brand-soft" />
+        )}
         {item.image_url ? (
           <Image
             src={item.image_url}
@@ -37,9 +43,10 @@ export function MenuItemCard({
             fill
             sizes="(max-width: 640px) 46vw, (max-width: 1024px) 30vw, 260px"
             priority={priority}
-            className={`object-cover transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 ${
-              item.available ? "" : "grayscale"
-            }`}
+            onLoad={() => setLoaded(true)}
+            className={`object-cover transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-110 ${
+              loaded ? "opacity-100" : "opacity-0"
+            } ${item.available ? "" : "grayscale"}`}
           />
         ) : (
           <div className="grid h-full place-items-center text-4xl">🍨</div>

@@ -14,14 +14,48 @@ const BUCKET = "menu-images";
 
 /* ----------------------------- Storage ----------------------------- */
 
+/**
+ * Downscale + compress an image in the browser before upload so menu photos
+ * load fast (phone cameras produce 2–5 MB files; this trims them to ~100–300 KB).
+ * Falls back to the original file if anything goes wrong or it's already small.
+ */
+async function compressImage(file: File, maxDim = 1280, quality = 0.82): Promise<Blob> {
+  if (typeof document === "undefined" || !file.type.startsWith("image/")) return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+    if (width > maxDim || height > maxDim) {
+      const scale = maxDim / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((res) =>
+      canvas.toBlob(res, "image/jpeg", quality)
+    );
+    return blob && blob.size < file.size ? blob : file;
+  } catch {
+    return file;
+  }
+}
+
 /** Upload a file to the public menu-images bucket and return its public URL. */
 export async function uploadImage(file: File, folder = "menu"): Promise<string> {
   const supabase = createClient();
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const optimized = await compressImage(file);
+  const compressed = optimized !== file;
+  const ext = compressed ? "jpg" : file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${folder}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, optimized, {
     cacheControl: "3600",
     upsert: false,
+    contentType: compressed ? "image/jpeg" : file.type || undefined,
   });
   if (error) throw error;
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
