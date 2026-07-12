@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowRight, Leaf, Snowflake, ShieldCheck, Heart } from "lucide-react";
 import { getCategories, getGallery, getMenuItems, getRestaurant } from "@/lib/queries";
 import { Hero } from "@/components/site/Hero";
+import { AmbienceSlideshow } from "@/components/site/AmbienceSlideshow";
 import { FeaturedMenu } from "@/components/menu/FeaturedMenu";
 import { Reveal } from "@/components/ui/Reveal";
 import { LucideIcon } from "@/components/ui/LucideIcon";
@@ -112,6 +113,22 @@ export default async function HomePage() {
             ))}
           </div>
         </div>
+      </section>
+
+      {/* Ambience */}
+      <section className="container-page py-12">
+        <Reveal className="mx-auto mb-8 max-w-xl text-center">
+          <span className="chip bg-blue-soft text-blue">📍 Our space</span>
+          <h2 className="mt-3 font-display text-2xl font-bold text-ink sm:text-3xl">
+            Step inside <span className="text-gradient">Snow Spoon</span>
+          </h2>
+          <p className="mt-3 text-ink-soft">
+            A splash of colour, comfy corners and a whole lot of sweetness — come hang out.
+          </p>
+        </Reveal>
+        <Reveal>
+          <AmbienceSlideshow />
+        </Reveal>
       </section>
 
       {/* Gallery teaser */}

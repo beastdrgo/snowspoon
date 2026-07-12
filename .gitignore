@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local source/upload media (the copies actually used live under /public)
+/*.png
+/*.jpeg
+/*.jpg
