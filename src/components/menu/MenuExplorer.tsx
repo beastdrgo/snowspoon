@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Leaf, CheckCircle2, X, UtensilsCrossed } from "lucide-react";
 import type { Category, MenuItem } from "@/lib/types";
 import { useMenuStore, type SortKey } from "@/store/menu";
@@ -17,6 +16,8 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Alphabetical" },
 ];
 
+const UNCAT = "_more";
+
 export function MenuExplorer({
   categories,
   items,
@@ -26,33 +27,23 @@ export function MenuExplorer({
 }) {
   const {
     query,
-    category,
     sort,
     onlyAvailable,
     onlyVeg,
     selected,
     setQuery,
-    setCategory,
     setSort,
     toggleAvailable,
     toggleVeg,
     select,
   } = useMenuStore();
 
-  const railRef = useRef<HTMLDivElement>(null);
+  const [activeSlug, setActiveSlug] = useState<string>("");
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const it of items) {
-      if (it.category_slug) map[it.category_slug] = (map[it.category_slug] ?? 0) + 1;
-    }
-    return map;
-  }, [items]);
-
-  const filtered = useMemo(() => {
+  // Build one section per category, each with its filtered + sorted items.
+  const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = items.filter((it) => {
-      if (category !== "all" && it.category_slug !== category) return false;
+    const matches = (it: MenuItem) => {
       if (onlyAvailable && !it.available) return false;
       if (onlyVeg && !it.veg) return false;
       if (q) {
@@ -60,9 +51,8 @@ export function MenuExplorer({
         if (!hay.includes(q)) return false;
       }
       return true;
-    });
-
-    list = [...list].sort((a, b) => {
+    };
+    const sortFn = (a: MenuItem, b: MenuItem) => {
       switch (sort) {
         case "price-asc":
           return a.price - b.price;
@@ -73,42 +63,73 @@ export function MenuExplorer({
         case "newest":
           return +new Date(b.created_at) - +new Date(a.created_at);
         default:
-          // featured: manual admin drag order (sort_order), name as tiebreak
           if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
           return a.name.localeCompare(b.name);
       }
-    });
-    return list;
-  }, [items, category, query, sort, onlyAvailable, onlyVeg]);
+    };
 
-  const activeCategory = categories.find((c) => c.slug === category);
+    const out = categories
+      .map((cat) => ({
+        slug: cat.slug,
+        label: cat.label,
+        icon: cat.icon,
+        lucide: cat.lucide,
+        list: items.filter((it) => it.category_slug === cat.slug && matches(it)).sort(sortFn),
+      }))
+      .filter((s) => s.list.length > 0);
+
+    const orphans = items.filter((it) => !it.category_slug && matches(it)).sort(sortFn);
+    if (orphans.length > 0) {
+      out.push({ slug: UNCAT, label: "More", icon: "🍽️", lucide: null, list: orphans });
+    }
+    return out;
+  }, [items, categories, query, sort, onlyAvailable, onlyVeg]);
+
+  const totalShown = sections.reduce((n, s) => n + s.list.length, 0);
+
+  function jumpTo(slug: string) {
+    setActiveSlug(slug);
+    document.getElementById(`cat-${slug}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Scroll-spy: highlight the section currently in view.
+  useEffect(() => {
+    const els = sections
+      .map((s) => document.getElementById(`cat-${s.slug}`))
+      .filter((el): el is HTMLElement => !!el);
+    if (els.length === 0) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActiveSlug(visible[0].target.id.replace("cat-", ""));
+      },
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, [sections]);
 
   return (
     <section className="container-page pb-8">
       <div className="grid min-w-0 gap-6 lg:grid-cols-[248px_1fr]">
-        {/* ---------------- Sidebar (desktop) ---------------- */}
+        {/* ---------------- Sidebar (desktop) — jump nav ---------------- */}
         <aside className="hidden lg:block">
           <div className="sticky top-24">
             <p className="px-3 pb-2 text-xs font-bold uppercase tracking-wide text-muted">
-              Categories
+              Menu sections
             </p>
             <ul className="space-y-1">
-              <SidebarItem
-                active={category === "all"}
-                label="All Items"
-                emoji="✨"
-                count={items.length}
-                onClick={() => setCategory("all")}
-              />
-              {categories.map((c) => (
+              {sections.map((s) => (
                 <SidebarItem
-                  key={c.id}
-                  active={category === c.slug}
-                  label={c.label}
-                  emoji={c.icon ?? "🍽️"}
-                  lucide={c.lucide}
-                  count={counts[c.slug] ?? 0}
-                  onClick={() => setCategory(c.slug)}
+                  key={s.slug}
+                  active={activeSlug === s.slug}
+                  label={s.label}
+                  emoji={s.icon ?? "🍽️"}
+                  lucide={s.lucide}
+                  count={s.list.length}
+                  onClick={() => jumpTo(s.slug)}
                 />
               ))}
             </ul>
@@ -118,7 +139,7 @@ export function MenuExplorer({
         {/* ---------------- Main ---------------- */}
         <div className="min-w-0">
           {/* Toolbar */}
-          <div className="sticky top-[4.5rem] z-30 -mx-1 mb-5 rounded-3xl">
+          <div className="sticky top-[4.5rem] z-30 -mx-1 mb-6 rounded-3xl">
             <div className="glass card rounded-3xl p-3 sm:p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 {/* Search */}
@@ -160,7 +181,7 @@ export function MenuExplorer({
                 </div>
               </div>
 
-              {/* Filters + pills */}
+              {/* Filters */}
               <div className="mt-3 flex items-center gap-2">
                 <FilterToggle active={onlyVeg} onClick={toggleVeg} icon={<Leaf className="size-3.5" />}>
                   Veg only
@@ -174,54 +195,60 @@ export function MenuExplorer({
                 </FilterToggle>
               </div>
 
-              {/* Category pills rail */}
-              <div
-                ref={railRef}
-                className="no-scrollbar mask-fade-r mt-3 flex gap-2 overflow-x-auto pb-1"
-              >
-                <Pill active={category === "all"} onClick={() => setCategory("all")}>
-                  All
-                </Pill>
-                {categories.map((c) => (
-                  <Pill key={c.id} active={category === c.slug} onClick={() => setCategory(c.slug)}>
-                    <span className="text-[0.95em]">{c.icon}</span> {c.short ?? c.label}
-                  </Pill>
-                ))}
-              </div>
+              {/* Section jump rail */}
+              {sections.length > 0 && (
+                <div className="no-scrollbar mask-fade-r mt-3 flex gap-2 overflow-x-auto pb-1">
+                  {sections.map((s) => (
+                    <Pill key={s.slug} active={activeSlug === s.slug} onClick={() => jumpTo(s.slug)}>
+                      <span className="text-[0.95em]">{s.icon}</span> {s.label}
+                    </Pill>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Header row */}
-          <div className="mb-4 flex items-end justify-between px-1">
-            <div>
-              <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">
-                {activeCategory ? activeCategory.label : "All Items"}
-              </h2>
-              <p className="text-sm text-muted">
-                {filtered.length} {filtered.length === 1 ? "item" : "items"}
-              </p>
+          {/* Sections */}
+          {sections.length > 0 ? (
+            <div className="space-y-11">
+              {sections.map((s, si) => (
+                <section
+                  key={s.slug}
+                  id={`cat-${s.slug}`}
+                  className="scroll-mt-[240px] sm:scroll-mt-[210px]"
+                >
+                  <div className="mb-4 flex items-center gap-3 px-1">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
+                      {s.lucide ? <LucideIcon name={s.lucide} className="size-5" /> : <span className="text-lg">{s.icon}</span>}
+                    </span>
+                    <div>
+                      <h2 className="font-display text-xl font-bold text-ink sm:text-2xl">{s.label}</h2>
+                      <p className="text-sm text-muted">
+                        {s.list.length} {s.list.length === 1 ? "item" : "items"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+                    {s.list.map((item, i) => (
+                      <MenuItemCard
+                        key={item.id}
+                        item={item}
+                        onSelect={select}
+                        priority={si === 0 && i < 4}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
             </div>
-          </div>
-
-          {/* Grid */}
-          {filtered.length > 0 ? (
-            <motion.div
-              layout
-              className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
-              initial="hidden"
-              animate="show"
-              transition={{ staggerChildren: 0.025, delayChildren: 0 }}
-            >
-              <AnimatePresence mode="popLayout">
-                {filtered.map((item, i) => (
-                  <motion.div key={item.id} layout exit={{ opacity: 0, scale: 0.9 }}>
-                    <MenuItemCard item={item} onSelect={select} priority={i < 4} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
           ) : (
             <EmptyState />
+          )}
+
+          {totalShown > 0 && (
+            <p className="mt-10 text-center text-sm text-muted">
+              That&apos;s our full menu — {totalShown} item{totalShown === 1 ? "" : "s"}. 🍨
+            </p>
           )}
         </div>
       </div>
@@ -252,17 +279,10 @@ function SidebarItem({
     <li>
       <button
         onClick={onClick}
-        className={`group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
+        className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
           active ? "bg-brand-soft text-brand" : "text-ink-soft hover:bg-cloud"
         }`}
       >
-        {active && (
-          <motion.span
-            layoutId="sidebar-active"
-            className="absolute inset-0 -z-10 rounded-2xl bg-brand-soft"
-            transition={{ type: "spring", stiffness: 400, damping: 34 }}
-          />
-        )}
         <span
           className={`grid size-9 shrink-0 place-items-center rounded-xl border transition-colors ${
             active ? "border-brand-tint bg-white text-brand" : "border-line bg-white text-ink-soft"
