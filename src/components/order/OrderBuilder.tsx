@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minus, Plus, ShoppingBag, MapPin, MessageCircle, UtensilsCrossed } from "lucide-react";
+import { Minus, Plus, ShoppingBag, MapPin, MessageCircle, UtensilsCrossed, ShieldAlert } from "lucide-react";
 import type { Category, MenuItem } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { WhatsappIcon } from "@/components/ui/BrandIcons";
@@ -12,11 +12,13 @@ export function OrderBuilder({
   items,
   categories,
   table,
+  tampered = false,
   whatsappNumber,
 }: {
   items: MenuItem[];
   categories: Category[];
   table: string | null;
+  tampered?: boolean;
   whatsappNumber: string;
 }) {
   const [qty, setQty] = useState<Record<string, number>>({});
@@ -57,6 +59,21 @@ export function OrderBuilder({
       (note.trim() ? `\n\n*Note:* ${note.trim()}` : "");
     return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(msg)}`;
   }, [order, tableNo, note, whatsappNumber]);
+
+  if (tampered) {
+    return (
+      <div className="card mx-auto max-w-md rounded-3xl p-8 text-center">
+        <div className="mx-auto grid size-14 place-items-center rounded-full bg-red-50 text-red-500">
+          <ShieldAlert className="size-7" />
+        </div>
+        <h2 className="mt-4 font-display text-xl font-bold text-ink">This QR code isn&apos;t valid</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          Please scan the official QR code printed on your table to place an order. If this keeps
+          happening, ask our staff for help.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-32">
