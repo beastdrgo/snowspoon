@@ -6,7 +6,6 @@ import { Hero } from "@/components/site/Hero";
 import { AmbienceSlideshow } from "@/components/site/AmbienceSlideshow";
 import { FeaturedMenu } from "@/components/menu/FeaturedMenu";
 import { Reveal } from "@/components/ui/Reveal";
-import { LucideIcon } from "@/components/ui/LucideIcon";
 
 export const revalidate = 60;
 
@@ -32,39 +31,25 @@ export default async function HomePage() {
     <>
       <Hero restaurant={restaurant} />
 
-      {/* Category strip */}
-      <section className="container-page py-8">
-        <Reveal className="mb-6 flex items-end justify-between">
-          <div>
-            <h2 className="heading-underline font-display text-2xl font-bold text-ink sm:text-3xl">
-              Explore by category
+      {/* Explore menu CTA */}
+      <section className="container-page py-10">
+        <Reveal>
+          <div className="card flex flex-col items-center gap-4 rounded-[2rem] px-6 py-12 text-center sm:py-14">
+            <span className="chip bg-brand-soft text-brand">🍨 Our full menu</span>
+            <h2 className="font-display text-3xl font-extrabold text-ink sm:text-4xl">
+              Explore our full menu
             </h2>
+            <p className="max-w-md text-ink-soft">
+              {categories.length > 0
+                ? `${categories.slice(0, 4).map((c) => c.short ?? c.label).join(", ")} & more`
+                : "Sundaes, shakes, desserts, burgers & more"}{" "}
+              — all made fresh, made for you.
+            </p>
+            <Link href="/menu" className="btn btn-primary mt-2 px-8 py-3.5 text-base">
+              Explore Menu <ArrowRight className="size-4.5" />
+            </Link>
           </div>
-          <Link
-            href="/menu"
-            className="hidden items-center gap-1 text-sm font-semibold text-brand hover:gap-2 sm:inline-flex"
-          >
-            View all <ArrowRight className="size-4" />
-          </Link>
         </Reveal>
-
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10">
-          {categories.map((c, i) => (
-            <Reveal key={c.id} delay={i * 0.04}>
-              <Link
-                href="/menu"
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-line bg-white p-3 text-center shadow-soft transition-all hover:-translate-y-1 hover:border-brand-tint hover:shadow-lift"
-              >
-                <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-colors group-hover:bg-brand group-hover:text-white">
-                  {c.lucide ? <LucideIcon name={c.lucide} className="size-5" /> : <span>{c.icon}</span>}
-                </span>
-                <span className="text-xs font-semibold leading-tight text-ink-soft">
-                  {c.short ?? c.label}
-                </span>
-              </Link>
-            </Reveal>
-          ))}
-        </div>
       </section>
 
       {/* Popular picks */}

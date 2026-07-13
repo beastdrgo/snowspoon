@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true
+    },
+    {
+      "name": "lead-scraper-dashboard",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8777", "--directory", "C:/Users/afzal/OneDrive/Documents/lead-scraper"],
+      "port": 8777
     }
   ]
 }
