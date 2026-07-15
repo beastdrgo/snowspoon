@@ -10,9 +10,12 @@ import { formatPrice } from "@/lib/format";
 export function ProductModal({
   item,
   onClose,
+  action,
 }: {
   item: MenuItem | null;
   onClose: () => void;
+  /** Optional footer control (e.g. an "Add to order" button on the order page). */
+  action?: React.ReactNode;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -162,20 +165,20 @@ export function ProductModal({
                     {item.available ? "Available now" : "Currently unavailable"}
                   </div>
                 </div>
-                <span
-                  className={`chip px-3 py-1.5 text-sm ${
-                    item.available
-                      ? "bg-green-50 text-green-700"
-                      : "bg-cloud text-muted"
-                  }`}
-                >
+                {action ?? (
                   <span
-                    className={`size-2 rounded-full ${
-                      item.available ? "bg-green-500" : "bg-muted"
+                    className={`chip px-3 py-1.5 text-sm ${
+                      item.available ? "bg-green-50 text-green-700" : "bg-cloud text-muted"
                     }`}
-                  />
-                  {item.available ? "In stock" : "Sold out"}
-                </span>
+                  >
+                    <span
+                      className={`size-2 rounded-full ${
+                        item.available ? "bg-green-500" : "bg-muted"
+                      }`}
+                    />
+                    {item.available ? "In stock" : "Sold out"}
+                  </span>
+                )}
               </div>
             </div>
           </motion.div>

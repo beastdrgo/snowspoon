@@ -7,6 +7,7 @@ import { Minus, Plus, ShoppingBag, MapPin, MessageCircle, UtensilsCrossed, Shiel
 import type { Category, MenuItem } from "@/lib/types";
 import { formatPrice } from "@/lib/format";
 import { WhatsappIcon } from "@/components/ui/BrandIcons";
+import { ProductModal } from "@/components/menu/ProductModal";
 
 export function OrderBuilder({
   items,
@@ -25,6 +26,7 @@ export function OrderBuilder({
   const [tableNo, setTableNo] = useState(table ?? "");
   const [note, setNote] = useState("");
   const [category, setCategory] = useState("all");
+  const [selected, setSelected] = useState<MenuItem | null>(null);
 
   const setItemQty = (id: string, n: number) =>
     setQty((prev) => {
@@ -128,20 +130,27 @@ export function OrderBuilder({
                 count ? "ring-2 ring-brand/30" : ""
               }`}
             >
-              <span className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-cloud">
-                {item.image_url ? (
-                  <Image src={item.image_url} alt={item.name} fill sizes="64px" className="object-cover" />
-                ) : (
-                  <span className="grid h-full place-items-center text-2xl">🍨</span>
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">{item.name}</p>
-                {item.description && (
-                  <p className="line-clamp-1 text-xs text-muted">{item.description}</p>
-                )}
-                <p className="mt-0.5 font-display font-bold text-brand">{formatPrice(item.price)}</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => setSelected(item)}
+                aria-label={`View ${item.name} details`}
+                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+              >
+                <span className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-cloud">
+                  {item.image_url ? (
+                    <Image src={item.image_url} alt={item.name} fill sizes="64px" className="object-cover" />
+                  ) : (
+                    <span className="grid h-full place-items-center text-2xl">🍨</span>
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink">{item.name}</p>
+                  {item.description && (
+                    <p className="line-clamp-1 text-xs text-muted">{item.description}</p>
+                  )}
+                  <p className="mt-0.5 font-display font-bold text-brand">{formatPrice(item.price)}</p>
+                </div>
+              </button>
 
               {count === 0 ? (
                 <button
@@ -241,6 +250,47 @@ export function OrderBuilder({
         <MessageCircle className="size-3.5" />
         Your order opens in WhatsApp pre-filled — just tap send, and the kitchen gets it.
       </p>
+
+      {/* product detail popup with an add-to-order control */}
+      <ProductModal
+        item={selected}
+        onClose={() => setSelected(null)}
+        action={
+          selected ? (
+            (qty[selected.id] ?? 0) === 0 ? (
+              <button
+                type="button"
+                onClick={() => setItemQty(selected.id, 1)}
+                className="btn btn-primary px-6 py-3 text-sm"
+              >
+                <Plus className="size-4" /> Add to order
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 rounded-full bg-brand px-2 py-2 text-white">
+                <button
+                  type="button"
+                  onClick={() => setItemQty(selected.id, (qty[selected.id] ?? 0) - 1)}
+                  aria-label="Remove one"
+                  className="grid size-8 place-items-center rounded-full transition-colors hover:bg-white/20"
+                >
+                  <Minus className="size-4" />
+                </button>
+                <span className="min-w-6 text-center text-base font-bold tabular-nums">
+                  {qty[selected.id]}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setItemQty(selected.id, (qty[selected.id] ?? 0) + 1)}
+                  aria-label="Add one"
+                  className="grid size-8 place-items-center rounded-full transition-colors hover:bg-white/20"
+                >
+                  <Plus className="size-4" />
+                </button>
+              </div>
+            )
+          ) : undefined
+        }
+      />
     </div>
   );
 }
